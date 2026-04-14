@@ -351,7 +351,6 @@
       if (!response.ok) return null;
       const parsed = await response.json();
       if (!parsed) return null;
-      console.log('AI parse result:', parsed);
       return parsed;
     } catch (e) {
       console.warn('ChatBot Widget AI Error (falling back to classic logic):', e);
@@ -373,7 +372,6 @@
       if (!res.ok) return null;
       const parsed = await res.json();
       if (!parsed) return null;
-      console.log('Chat API result:', parsed);
       return parsed;
     } catch (e) {
       console.warn('ChatBot Widget /api/chat error (falling back):', e);
@@ -955,7 +953,6 @@
           email: reservationState.email,
           status: 'confirmed'
         };
-        console.log("Reservation payload:", payload);
 
         const { error: insertError } = await supabase
           .from('reservations')
@@ -1515,7 +1512,6 @@
     const isClientActive = await checkClientActive();
 
     if (isClientActive !== true) {
-      console.log(`ChatBot Widget: Client "${CLIENT_ID}" inactive or not found in Supabase`);
       return;
     }
 
