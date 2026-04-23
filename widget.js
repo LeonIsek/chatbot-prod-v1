@@ -1766,6 +1766,64 @@ console.log("WIDGET STARTET");
         const slots = await getSlotAvailabilityForCurrentReservation();
 
         if (slots && slots.closed) {
+          // Phase γ: statt nur "neues Datum waehlen", naechsten offenen Tag finden + als Chip
+          const findNextOpenDay = (fromIso) => {
+            const start = new Date(fromIso);
+            if (isNaN(start.getTime())) return null;
+            for (let i = 1; i <= 14; i++) {
+              const candidate = new Date(start);
+              candidate.setDate(candidate.getDate() + i);
+              const candIso = toISODate(candidate);
+              const candRanges = getDayRanges(candIso);
+              if (candRanges && candRanges.length > 0) return candIso;
+            }
+            return null;
+          };
+          const fromIso = resolveDateToISO(reservationState.date) || toISODate(new Date());
+          const nextOpen = findNextOpenDay(fromIso);
+
+          if (nextOpen) {
+            const nextLabel = formatDateForDisplay(nextOpen) || nextOpen;
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message bot';
+            const header = t(
+              'An diesem Tag haben wir leider geschlossen. Unser nächster offener Tag ist:',
+              'We are closed that day. Our next open day is:',
+              'Nous sommes fermés ce jour-là. Notre prochain jour d\'ouverture est:'
+            );
+            const otherLabel = t('anderes Datum', 'other date', 'autre date');
+            messageDiv.innerHTML = `
+              <div class="message-content" style="max-width:90%;">
+                ${header}<br><br>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                  <button type="button" data-next-open="${nextOpen}" style="padding:10px 14px;border:none;border-radius:10px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;font-size:13px;cursor:pointer;">${nextLabel}</button>
+                  <button type="button" data-other-date="1" style="padding:10px 14px;border:1px solid #667eea;border-radius:10px;background:transparent;color:#667eea;font-size:13px;cursor:pointer;">${otherLabel}</button>
+                </div>
+              </div>`;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            const nextBtn = messageDiv.querySelector('button[data-next-open]');
+            nextBtn.addEventListener('click', async () => {
+              const iso = nextBtn.getAttribute('data-next-open');
+              reservationState.date = iso;
+              addMessage('user', nextLabel);
+              await showTimeSlotOptions();
+            });
+            const otherBtn = messageDiv.querySelector('button[data-other-date]');
+            otherBtn.addEventListener('click', () => {
+              reservationState.date = null;
+              reservationState.step = 'date';
+              addMessage('bot', t(
+                'Welches Datum soll es sein?',
+                'Which date would you like?',
+                'Quelle date souhaitez-vous?'
+              ));
+            });
+            return;
+          }
+
+          // Fallback: alter Pfad wenn kein offener Tag in 14 Tagen gefunden
           reservationState.date = null;
           reservationState.step = 'date';
           addMessage('bot', t(
